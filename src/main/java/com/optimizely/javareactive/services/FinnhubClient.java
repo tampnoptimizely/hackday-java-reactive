@@ -1,5 +1,6 @@
-package com.optimizely.javareactive;
+package com.optimizely.javareactive.services;
 
+import com.optimizely.javareactive.documents.StockPrice;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,5 @@ public class FinnhubClient {
         public double getCurrentPrice() {
             return c;
         }
-
     }
 }
