@@ -61,10 +61,20 @@ public class SymbolService {
 
 
     public Flux<Symbol> getSymbols(String term, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Query query = buildQuerySearchWithTerm(term);
+        query.with(PageRequest.of(page, size));
 
-        Query query = new Query().with(pageable);
+        return reactiveMongoTemplate.find(query, Symbol.class);
+    }
 
+    public Mono<Long> countSymbols(String term) {
+        Query query = buildQuerySearchWithTerm(term);
+
+        return reactiveMongoTemplate.count(query, Symbol.class);
+    }
+
+    private Query buildQuerySearchWithTerm(String term) {
+        Query query = new Query();
         if (StringUtils.hasText(term)) {
             Criteria criteria = new Criteria().orOperator(
                     Criteria.where("symbol").regex(term, "i"),
@@ -72,7 +82,6 @@ public class SymbolService {
             );
             query.addCriteria(criteria);
         }
-
-        return reactiveMongoTemplate.find(query, Symbol.class);
+        return query;
     }
 }

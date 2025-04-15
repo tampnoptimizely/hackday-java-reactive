@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -34,11 +34,11 @@ public class StockController {
             @RequestParam(required = false) String q
     ) {
         Flux<Symbol> listSymbols = symbolService.getSymbols(q, page, size);
-        Mono<Long> totalSymbols = listSymbols.count();
+        Mono<Long> totalSymbols = symbolService.countSymbols(q);
         return listSymbols.collectList()
                 .zipWith(totalSymbols, (symbols, total) -> PageResponse.builder()
                         .total(total)
-                        .data(Collections.singletonList(symbols))
+                        .data(new ArrayList<>(symbols))
                         .page(page)
                         .size(size)
                         .build());
