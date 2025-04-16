@@ -15,39 +15,77 @@
 </head>
 <body>
 <div class="container mt-5">
-    <h3>Stock Symbols</h3>
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <input type="text" id="searchInput" class="form-control" placeholder="Search symbol or description...">
+    <h3>Stock Dashboard</h3>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="stockTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="symbols-tab" data-toggle="tab" href="#symbols" role="tab">Symbols List</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tracking-tab" data-toggle="tab" href="#tracking" role="tab">Price Tracking</a>
+        </li>
+    </ul>
+
+    <div class="tab-content pt-3" id="stockTabsContent">
+        <!-- Tab 1: Symbol List -->
+        <div class="tab-pane fade show active" id="symbols" role="tabpanel">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search symbol or description...">
+                </div>
+                <div class="col-md-2">
+                    <select id="limitSelect" class="form-control">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <table class="table table-bordered table-hover">
+                <thead class="thead-dark">
+                <tr>
+                    <th class="text-center">Symbol</th>
+                    <th class="text-center">Description</th>
+                    <th class="text-center">Currency</th>
+                    <th class="text-center">Action</th>
+                </tr>
+                </thead>
+                <tbody id="symbolTableBody"></tbody>
+            </table>
+
+            <nav>
+                <div id="pagination" class="pb-5"></div>
+            </nav>
         </div>
-        <div class="col-md-2">
-            <select id="limitSelect" class="form-control">
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
+
+        <!-- Tab 2: Price Tracking -->
+        <div class="tab-pane fade" id="tracking" role="tabpanel">
+            <h5>Watch List - Live Price Tracking</h5>
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                <tr>
+                    <th class="text-center">Symbol</th>
+                    <th class="text-center">Current Price</th>
+                    <th class="text-center">Change</th>
+                    <th class="text-center">High Price</th>
+                    <th class="text-center">Low Price</th>
+                    <th class="text-center">Open Price</th>
+                    <th class="text-center">Time Stamp</th>
+                    <th class="text-center">Action</th>
+                </tr>
+                </thead>
+                <tbody id="priceTrackingTableBody">
+                <!-- Price tracking rows will be appended here -->
+                </tbody>
+            </table>
         </div>
     </div>
-
-    <table class="table table-bordered table-hover">
-        <thead class="thead-dark">
-        <tr>
-            <th class="text-center">Symbol</th>
-            <th class="text-center">Description</th>
-            <th class="text-center">Currency</th>
-            <th class="text-center">Action</th>
-        </tr>
-        </thead>
-        <tbody id="symbolTableBody">
-        </tbody>
-    </table>
-
-    <nav>
-        <div id="pagination" class="pb-5"></div>
-    </nav>
 </div>
 
+<!-- JS -->
 <script>
     function loadSymbols(page = 0) {
         const keyword = $('#searchInput').val();
@@ -56,17 +94,17 @@
         $.get(`/api/stocks/symbols?page=${page}&size=${limit}&q=${keyword}`, function (res) {
             const tbody = $('#symbolTableBody');
             tbody.empty();
-            const symbols = res.data
+            const symbols = res.data;
 
             for (const symbol of symbols) {
                 tbody.append(`
                     <tr>
-                      <td class="text-center">${symbol.symbol}</td>
-                      <td>${symbol.description}</td>
-                      <td class="text-center">${symbol.currency}</td>
-                      <td class="table-actions text-center">
-                        <button class="btn btn-success btn-sm" onclick="addToWatchlist('${symbol.symbol}')">Add to Watch List</button>
-                      </td>
+                        <td class="text-center">${symbol.symbol}</td>
+                        <td>${symbol.description}</td>
+                        <td class="text-center">${symbol.currency}</td>
+                        <td class="table-actions text-center">
+                            <button class="btn btn-success btn-sm" onclick="addToWatchlist('${symbol.symbol}')">Add to Watch List</button>
+                        </td>
                     </tr>`);
             }
 
@@ -94,7 +132,73 @@
     }
 
     function addToWatchlist(symbol) {
-        alert("Added " + symbol + " to watch list!");
+        let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+
+        if (!watchlist.includes(symbol)) {
+            watchlist.push(symbol);
+            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        }
+
+        loadWatchlistPrices();
+        $('#tracking-tab').tab('show');
+    }
+
+    function removeSymbolFromWatchlist(symbol) {
+        const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+
+        // Case-insensitive removal (set to false if you want strict match)
+        const ignoreCase = true;
+
+        const matchFunc = ignoreCase
+            ? (s) => s.toLowerCase() === symbol.toLowerCase()
+            : (s) => s === symbol;
+
+        const exists = watchlist.some(matchFunc);
+
+        if (!exists) {
+            alert(`${symbol} is not in your watchlist.`);
+            return;
+        }
+
+        if (confirm(`Are you sure you want to remove ${symbol} from your watchlist?`)) {
+            const updated = watchlist.filter(s => !matchFunc(s));
+            localStorage.setItem('watchlist', JSON.stringify(updated));
+
+            // Optional success message
+            alert(`${symbol} has been removed from your watchlist.`);
+
+            // Reload the watchlist prices
+            loadWatchlistPrices();
+        }
+    }
+
+    function loadWatchlistPrices() {
+        const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+        if (watchlist.length === 0) return;
+
+        const symbolsParam = watchlist.join(',');
+
+        $.get(`/api/stocks/prices?symbols=${symbolsParam}`, function (prices) {
+            const trackingBody = $('#priceTrackingTableBody');
+            trackingBody.empty();
+
+            for (const price of prices) {
+                trackingBody.append(`
+                <tr id="track-${price.symbol}">
+                    <td class="text-center">${price.symbol}</td>
+                    <td class="text-center">${price.price}</td>
+                    <td class="text-center">${price.percentChange}</td>
+                    <td class="text-center">${price.highPrice}</td>
+                    <td class="text-center">${price.lowPrice}</td>
+                    <td class="text-center">${price.openPrice}</td>
+                    <td class="text-center">${price.timestamp}</td>
+                    <td class="table-actions text-center">
+                            <button class="btn btn-danger btn-sm" onclick="removeSymbolFromWatchlist('${price.symbol}')">Delete</button>
+                        </td>
+                </tr>
+            `);
+            }
+        });
     }
 
     $(document).ready(function () {
@@ -109,7 +213,14 @@
         $('#limitSelect').change(function () {
             loadSymbols(0);
         });
+
+        setInterval(() => {
+            loadWatchlistPrices();
+        }, 60000);
     });
 </script>
+
+<!-- Bootstrap 4 JS dependencies -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

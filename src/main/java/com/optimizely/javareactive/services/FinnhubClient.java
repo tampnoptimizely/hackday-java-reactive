@@ -30,15 +30,42 @@ public class FinnhubClient {
                         .build())
                 .retrieve()
                 .bodyToMono(FinnhubResponse.class)
-                .map(response -> new StockPrice(symbol, response.getCurrentPrice(), Instant.now()));
+                .map(response -> StockPrice
+                        .builder()
+                        .symbol(symbol)
+                        .price(response.getCurrentPrice())
+                        .percentChange(response.getPercentChange())
+                        .highPrice(response.getHighOfDay())
+                        .lowPrice(response.getLowOfDay())
+                        .openPrice(response.getOpenPriceOfDay())
+                        .timestamp(Instant.now())
+                        .build());
     }
 
     @Setter
     private static class FinnhubResponse {
         private double c;
+        private double dp;
+        private double h;
+        private double l;
+        private double o;
 
         public double getCurrentPrice() {
             return c;
+        }
+        public double getPercentChange() {
+            return dp;
+        }
+        public double getHighOfDay() {
+            return h;
+        }
+
+        public double getLowOfDay() {
+            return l;
+        }
+
+        public double getOpenPriceOfDay() {
+            return o;
         }
     }
 }

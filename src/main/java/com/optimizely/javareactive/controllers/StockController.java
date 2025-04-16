@@ -12,6 +12,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 @RestController
@@ -54,7 +55,11 @@ public class StockController {
     @GetMapping("/prices")
     public Flux<StockPrice> getPrices(@RequestParam String symbols) {
         List<String> symbolList = Arrays.asList(symbols.split(","));
+
         return Flux.fromIterable(symbolList)
-                .flatMap(finnhubClient::getQuote);
+                .flatMap(finnhubClient::getQuote)
+                .collectSortedList(Comparator.comparing(StockPrice::getSymbol))
+                .flatMapMany(Flux::fromIterable);
     }
+
 }
