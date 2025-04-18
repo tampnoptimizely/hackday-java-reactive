@@ -136,9 +136,6 @@ We want to build a REST API to:
 ---
 
 ## ⚙️ Traditional Java (Spring MVC)
-
-### ✅ Code Example
-
 ```java
 @GetMapping("/symbols")
 public PageResponse<Symbol> getSymbols(
@@ -161,22 +158,7 @@ public PageResponse<Symbol> getSymbols(
 }
 ```
 
-### 🚦 Characteristics
-
-| Feature | Description |
-|--------|-------------|
-| **Blocking** | Each MongoDB call blocks the thread until the result is returned. |
-| **Thread per request** | Each incoming request is handled by a thread, which waits during I/O. |
-| **Simple to debug** | Easier stack traces and linear flow. |
-| **Good for low concurrency** | Performs well under light or moderate traffic. |
-| **Resource intensive** | Threads are blocked during DB calls, which can limit scalability. |
-
----
-
 ## ⚡ Reactive Java (Spring WebFlux)
-
-### ✅ Code Example
-
 ```java
 @GetMapping("/symbols")
 public Mono<PageResponse<Object>> getSymbols(
@@ -197,19 +179,22 @@ public Mono<PageResponse<Object>> getSymbols(
 }
 ```
 
-### 🚦 Characteristics
-
-| Feature | Description |
-|--------|-------------|
-| **Non-blocking** | I/O operations are async, freeing up threads for other tasks. |
-| **Backpressure support** | Works well with streams of data, can control load with backpressure. |
-| **Scalable** | Ideal for high-concurrency apps (many connections with slow clients). |
-| **Harder to debug** | Flow is not linear; debugging can be tricky. |
-| **Cold by default** | Streams won’t start until subscribed. |
-| **Lazy Evaluation** | Operations only run when the final subscriber requests data. |
+## 🔁 `Flux<T>` vs `List<T>` – Key Differences in DB Access
+| Aspect | `List<T>` (Traditional) | `Flux<T>` (Reactive) |
+|--------|--------------------------|------------------------|
+| **Type** | Eager collection (all data loaded immediately) | Asynchronous stream of items (loaded reactively) |
+| **Execution** | Blocking – the thread waits for DB to respond | Non-blocking – the thread doesn’t wait, continues execution |
+| **Returned by** | `JpaRepository`, `MongoTemplate`, `JdbcTemplate`, etc. | `ReactiveCrudRepository`, `ReactiveMongoTemplate`, etc. |
+| **Memory** | Loads all data into memory at once | Streams data as it's ready, more memory efficient |
+| **Threading** | Uses the current thread until done | Works with event loop and scheduler threads |
+| **Performance** | Can cause thread starvation on heavy I/O | Scales better with high-concurrency I/O workloads |
+| **Error Handling** | Use `try/catch` | Use `.onErrorXxx()` (reactive operators) |
+| **Backpressure** | Not supported | Supported natively |
+| **Lazy vs Eager** | Eager execution | Lazy until subscribed |
+| **Control over flow** | No flow control once started | Can cancel, buffer, or delay stream |
+| **Good for** | Small to moderate datasets | Large datasets or high-concurrency environments |
 
 ---
-
 ## 🧠 Technical Differences Summary
 
 ### ✅ **Traditional Java vs Reactive Java – A Technical Comparison**
@@ -227,50 +212,6 @@ public Mono<PageResponse<Object>> getSymbols(
 | **Learning Curve** | Easier for most developers; familiar flow | Steeper curve; requires functional & async mindset |
 | **Debugging** | Straightforward with IDEs and stack traces | Can be tricky; async stack traces can be harder to follow |
 | **Use Cases** | Ideal for CPU-bound, blocking tasks, legacy systems | Best for high-throughput, IO-bound, concurrent applications (e.g., microservices, streaming, APIs) |
-
----
-## 🔁 `Flux<T>` vs `List<T>` – Key Differences in DB Access
-### 🔍 Example
-#### Traditional Java (Blocking)
-```java
-public List<Symbol> getSymbols(String term) {
-    Query query = buildQuery(term);
-    return mongoTemplate.find(query, Symbol.class); // Blocking
-}
-```
-
-- The thread calling this method is **blocked** until the full result is fetched from MongoDB.
-- Good for simple use cases but doesn't scale well under high load.
-
----
-
-#### Reactive Java (Non-blocking)
-```java
-public Flux<Symbol> getSymbols(String term) {
-    Query query = buildQuery(term);
-    return reactiveMongoTemplate.find(query, Symbol.class); // Non-blocking
-}
-```
-
-- Returns a `Flux<Symbol>`, which emits symbols **one at a time** (or in chunks) as they become available.
-- Does **not block** the thread. It subscribes only when needed.
-- More scalable in I/O-heavy applications.
-
----
-
-| Aspect | `List<T>` (Traditional) | `Flux<T>` (Reactive) |
-|--------|--------------------------|------------------------|
-| **Type** | Eager collection (all data loaded immediately) | Asynchronous stream of items (loaded reactively) |
-| **Execution** | Blocking – the thread waits for DB to respond | Non-blocking – the thread doesn’t wait, continues execution |
-| **Returned by** | `JpaRepository`, `MongoTemplate`, `JdbcTemplate`, etc. | `ReactiveCrudRepository`, `ReactiveMongoTemplate`, etc. |
-| **Memory** | Loads all data into memory at once | Streams data as it's ready, more memory efficient |
-| **Threading** | Uses the current thread until done | Works with event loop and scheduler threads |
-| **Performance** | Can cause thread starvation on heavy I/O | Scales better with high-concurrency I/O workloads |
-| **Error Handling** | Use `try/catch` | Use `.onErrorXxx()` (reactive operators) |
-| **Backpressure** | Not supported | Supported natively |
-| **Lazy vs Eager** | Eager execution | Lazy until subscribed |
-| **Control over flow** | No flow control once started | Can cancel, buffer, or delay stream |
-| **Good for** | Small to moderate datasets | Large datasets or high-concurrency environments |
 
 ---
 
