@@ -180,6 +180,7 @@ public Mono<PageResponse<Object>> getSymbols(
 ```
 
 ## 🔁 `Flux<T>` vs `List<T>` – Key Differences in DB Access
+
 | Aspect | `List<T>` (Traditional) | `Flux<T>` (Reactive) |
 |--------|--------------------------|------------------------|
 | **Type** | Eager collection (all data loaded immediately) | Asynchronous stream of items (loaded reactively) |
